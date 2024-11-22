@@ -1,0 +1,237 @@
+# Set seeds for reproducibility
+import random
+random.seed(0)
+
+import numpy as np
+np.random.seed(0)
+
+import tensorflow as tf
+tf.random.set_seed(0)
+# Importing the dependencies
+import os
+import json
+from zipfile import ZipFile
+from PIL import Image
+
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras import layers, models
+!pip install kaggle
+kaggle_credentials = json.load(open("kaggle.json"))
+# Setup Kaggle API key as environment variables
+os.environ["KAGGLE_USERNAME"] = kaggle_credentials["username"]
+os.environ["KAGGLE_KEY"] = kaggle_credentials["key"]
+# Download the dataset
+import kagglehub
+
+# Download latest version
+path = kagglehub.dataset_download("abdallahalidev/plantvillage-dataset")
+
+print("Path to dataset files:", path)
+!ls
+import os
+from zipfile import ZipFile
+
+# Extract the dataset if it's a ZIP file
+if path.endswith(".zip"):
+    with ZipFile(path, 'r') as zip_ref:
+        extract_path = os.path.splitext(path)[0]  # Remove .zip for folder name
+        zip_ref.extractall(extract_path)
+        print("Dataset extracted to:", extract_path)
+import os
+
+# List the files in the dataset directory
+files = os.listdir("/root/.cache/kagglehub/datasets/abdallahalidev/plantvillage-dataset/versions/3")
+print("Extracted files:", files)
+import os
+
+# Define the path to the extracted dataset
+dataset_root = "/root/.cache/kagglehub/datasets/abdallahalidev/plantvillage-dataset/versions/3/plantvillage dataset"
+
+# List the contents of the root dataset directory
+if os.path.exists(dataset_root):
+    print("Root folder contents:", os.listdir(dataset_root))
+else:
+    print("Dataset root folder does not exist.")
+import os
+import matplotlib.image as mpimg
+import matplotlib.pyplot as plt
+
+# Define the dataset path
+color_folder = "/root/.cache/kagglehub/datasets/abdallahalidev/plantvillage-dataset/versions/3/plantvillage dataset/color"
+
+# Select a specific category
+category = "Apple___Cedar_apple_rust"
+category_path = os.path.join(color_folder, category)
+
+# List and select an image
+if os.path.exists(category_path):
+    image_files = os.listdir(category_path)
+    if image_files:
+        image_path = os.path.join(category_path, image_files[0])
+        print("Selected image:", image_path)
+
+        # Read and display the image
+        img = mpimg.imread(image_path)
+        print("Image shape:", img.shape)
+        plt.imshow(img)
+        plt.axis("off")  # Turn off axis numbers
+        plt.show()
+    else:
+        print("No images found in category:", category)
+else:
+    print("Category folder not found:", category_path)
+
+
+# Define paths to subdirectories
+segmented_path = os.path.join(dataset_root, "segmented")
+color_path = os.path.join(dataset_root, "color")
+grayscale_path = os.path.join(dataset_root, "grayscale")
+
+# Check each subdirectory and list its contents
+if os.path.exists(segmented_path):
+    print("Segmented folder contents:", os.listdir(segmented_path)[:5])
+else:
+    print("Segmented folder does not exist.")
+
+if os.path.exists(color_path):
+    print("Color folder contents:", os.listdir(color_path)[:5])
+else:
+    print("Color folder does not exist.")
+
+if os.path.exists(grayscale_path):
+    print("Grayscale folder contents:", os.listdir(grayscale_path)[:5])
+else:
+    print("Grayscale folder does not exist.")
+# Recursively list all files and directories
+for root, dirs, files in os.walk(dataset_root):
+    print("Directory:", root)
+    for file in files:
+        print("File:", os.path.join(root, file))
+# Image Parameters
+img_size = 224
+batch_size = 32
+
+# Test Split
+
+# Image Data Generators
+data_gen = ImageDataGenerator(
+    rescale=1./255,
+    validation_split=0.2  # Use 20% of data for validation
+)
+# Correct base directory
+base_dir = '/root/.cache/kagglehub/datasets/abdallahalidev/plantvillage-dataset/versions/3/plantvillage dataset/color'
+# Train Generator
+train_generator = data_gen.flow_from_directory(
+    base_dir,
+    target_size=(img_size, img_size),
+    batch_size=batch_size,
+    subset='training',
+    class_mode='categorical'
+)
+
+# Validation Generator
+validation_generator = data_gen.flow_from_directory(
+    base_dir,
+    target_size=(img_size, img_size),
+    batch_size=batch_size,
+    subset='validation',
+    class_mode='categorical'
+)
+# Model Definition
+model = models.Sequential()
+
+model.add(layers.Conv2D(32, (3, 3), activation='relu', input_shape=(img_size, img_size, 3)))
+model.add(layers.MaxPooling2D((2, 2)))
+
+model.add(layers.Conv2D(64, (3, 3), activation='relu'))
+model.add(layers.MaxPooling2D((2, 2)))
+
+model.add(layers.Flatten())
+model.add(layers.Dense(256, activation='relu'))
+model.add(layers.Dense(train_generator.num_classes, activation='softmax'))
+model.summary()
+# Compile the Model
+model.compile(
+    optimizer='adam',
+    loss='categorical_crossentropy',
+    metrics=['accuracy']
+)
+
+# Training the Model
+history = model.fit(
+    train_generator,
+    steps_per_epoch=train_generator.samples // batch_size,  # Number of steps per epoch
+    epochs=5,  # Number of epochs
+    validation_data=validation_generator,
+    validation_steps=validation_generator.samples // batch_size  # Validation steps
+)
+
+# Model Evaluation
+print("Evaluating model...")
+val_loss, val_accuracy = model.evaluate(validation_generator, steps=validation_generator.samples // batch_size)
+print(f"Validation Accuracy: {val_accuracy * 100:.2f}%")
+
+# Plot training & validation accuracy values
+plt.plot(history.history['accuracy'])
+plt.plot(history.history['val_accuracy'])
+plt.title('Model Accuracy')
+plt.ylabel('Accuracy')
+plt.xlabel('Epoch')
+plt.legend(['Train', 'Test'], loc='upper left')
+plt.show()
+
+# Plot training & validation loss values
+plt.plot(history.history['loss'])
+plt.plot(history.history['val_loss'])
+plt.title('Model Loss')
+plt.ylabel('Loss')
+plt.xlabel('Epoch')
+plt.legend(['Train', 'Test'], loc='upper left')
+plt.show()
+# Function to Load and Preprocess the Image using Pillow
+def load_and_preprocess_image(image_path, target_size=(224, 224)):
+    # Load the image
+    img = Image.open(image_path)
+
+    # Resize the image
+    img = img.resize(target_size)
+
+    # Convert the image to a numpy array
+    img_array = np.array(img)
+
+    # Add batch dimension
+    img_array = np.expand_dims(img_array, axis=0)
+
+    # Scale the image values to [0, 1]
+    img_array = img_array.astype('float32') / 255.0
+
+    return img_array
+
+# Function to Predict the Class of an Image
+def predict_image_class(model, image_path, class_indices):
+    preprocessed_img = load_and_preprocess_image(image_path)
+    predictions = model.predict(preprocessed_img)
+    predicted_class_index = np.argmax(predictions, axis=1)[0]
+    predicted_class_name = class_indices[predicted_class_index]
+    return predicted_class_name
+
+# Create a mapping from class indices to class names
+class_indices = {v: k for k, v in train_generator.class_indices.items()}
+
+class_indices
+# Saving the class names as a JSON file
+json.dump(class_indices, open('class_indices.json', 'w'))
+
+# Example Usage
+image_path = '/root/.cache/kagglehub/datasets/abdallahalidev/plantvillage-dataset/versions/3/plantvillage dataset/segmented/Grape___Black_rot/143e8197-a7d6-48a7-8e9e-05cd7dd1323f___FAM_B.Rot 0421_final_masked.jpg'
+# image_path = '/root/.cache/kagglehub/datasets/abdallahalidev/plantvillage-dataset/versions/3/plantvillage dataset/color/Blueberry___healthy/123abc45-678d-90ef-gh12-ijkl3456mnop.jpg'
+# image_path = '/root/.cache/kagglehub/datasets/abdallahalidev/plantvillage-dataset/versions/3/plantvillage dataset/color/Potato___Early_blight/123abc45-678d-90ef-gh12-ijkl3456mnop.jpg'
+
+predicted_class_name = predict_image_class(model, image_path, class_indices)
+
+# Output the result
+print("Predicted Class Name:", predicted_class_name)
+model.save('/content/drive/MyDrive/Colab Notebooks.h5')
